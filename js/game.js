@@ -5,9 +5,50 @@ class Game {
         this.currentPosition = null;
         this.grid = [];
         this.highScore = localStorage.getItem('highScore') || 0;
-        this.normalRange = 3; // Normal range for straight moves
+        this.normalRange = 3;
         this.currentRange = this.normalRange;
-        this.powerCells = new Set(); // Track cells with powers
+        this.powerCells = new Set();
+        this.powerTypes = {
+            RANGE_UP: {
+                type: 'power-up',
+                effect: 1,
+                probability: 0.25,
+                displayDuration: 10000 // 10 seconds display time
+            },
+            RANGE_DOWN: {
+                type: 'power-down',
+                effect: -1,
+                probability: 0.25,
+                displayDuration: 10000
+            },
+            DOUBLE_SCORE: {
+                type: 'double-score',
+                effect: 2,
+                probability: 0.2,
+                duration: 5000, // 5 seconds effect duration
+                displayDuration: 10000
+            },
+            TRIPLE_SCORE: {
+                type: 'triple-score',
+                effect: 3,
+                probability: 0.15,
+                duration: 5000,
+                displayDuration: 10000
+            },
+            TELEPORT: {
+                type: 'teleport',
+                effect: 'teleport',
+                probability: 0.15,
+                displayDuration: 10000
+            }
+        };
+        this.scoreMultiplier = 1;
+        this.multiplierTimeout = null;
+        this.teleportActive = false;
+        this.teleportOrigin = null;
+        this.activeMultiplierCell = null;
+        this.powerTimeouts = new Map(); // Track timeouts for power cells
+        this.teleportUsed = false;
         this.initialize();
     }
 
@@ -58,16 +99,39 @@ class Game {
             }
         }
 
+        // Reset all power-related states
         this.currentRange = this.normalRange;
         this.powerCells.clear();
         this.clearAllPowers();
+        this.scoreMultiplier = 1;
+        if (this.multiplierTimeout) {
+            clearTimeout(this.multiplierTimeout);
+            this.multiplierTimeout = null;
+        }
+        this.activeMultiplierCell = null;
+
+        // Clear all power timeouts
+        this.powerTimeouts.forEach(timeout => clearTimeout(timeout));
+        this.powerTimeouts.clear();
 
         this.updateScore();
-        this.clearValidMoves(); // Clear any existing highlights
+        this.updateMultiplierDisplay();
+        this.teleportActive = false;
+        this.teleportUsed = false;
+        this.teleportOrigin = null;
     }
 
     handleCellClick(row, col) {
         if (this.grid[row][col].value !== null) return;
+
+        // If teleport is active, handle it differently
+        if (this.teleportActive && !this.teleportUsed) {
+            this.makeMove(row, col);
+            this.teleportActive = false;
+            this.teleportUsed = true;
+            this.clearTeleportHighlight();
+            return;
+        }
 
         if (this.currentPosition === null) {
             this.makeMove(row, col);
@@ -75,27 +139,51 @@ class Game {
         }
 
         if (this.isValidMove(row, col)) {
-            // Apply power-up/down if available
-            if (this.hasPowerUp) {
-                this.currentRange = this.normalRange + 1;
-                this.hasPowerUp = false;
-                this.powerUpElement.classList.add('hidden');
-            } else if (this.hasPowerDown) {
-                this.currentRange = this.normalRange - 1;
-                this.hasPowerDown = false;
-                this.powerDownElement.classList.add('hidden');
+            const power = this.grid[row][col].power;
+            if (power && power.type === 'teleport' && !this.teleportUsed) {
+                this.handleTeleport(row, col);
             } else {
-                this.currentRange = this.normalRange;
+                this.makeMove(row, col);
             }
+        }
+    }
 
-            this.makeMove(row, col);
+    handleTeleport(row, col) {
+        if (this.teleportUsed) return;
+
+        // Store the teleport origin
+        this.teleportOrigin = [row, col];
+        this.teleportActive = true;
+
+        // Highlight all empty cells as valid moves
+        for (let r = 0; r < this.gridSize; r++) {
+            for (let c = 0; c < this.gridSize; c++) {
+                if (this.grid[r][c].value === null && 
+                    !(r === row && c === col)) {
+                    this.grid[r][c].element.classList.add('valid-move', 'teleport-target');
+                }
+            }
+        }
+    }
+
+    clearTeleportHighlight() {
+        for (let row = 0; row < this.gridSize; row++) {
+            for (let col = 0; col < this.gridSize; col++) {
+                this.grid[row][col].element.classList.remove('teleport-target');
+            }
         }
     }
 
     isValidMove(row, col) {
+        if (this.teleportActive && !this.teleportUsed) {
+            // During teleport, any empty cell is valid except the teleport cell itself
+            return this.grid[row][col].value === null && 
+                   !(row === this.teleportOrigin[0] && col === this.teleportOrigin[1]);
+        }
+
         const [currentRow, currentCol] = this.currentPosition;
         
-        // Straight moves (horizontal and vertical)
+        // Straight moves
         if (row === currentRow) {
             return Math.abs(col - currentCol) === this.currentRange;
         }
@@ -103,8 +191,7 @@ class Game {
             return Math.abs(row - currentRow) === this.currentRange;
         }
         
-        // Diagonal moves - directly use currentRange - 1
-        // This makes diagonal moves always one cell less than straight moves
+        // Diagonal moves
         const diagonalRange = this.currentRange - 1;
         if (Math.abs(row - currentRow) === diagonalRange && 
             Math.abs(col - currentCol) === diagonalRange) {
@@ -115,20 +202,64 @@ class Game {
     }
 
     makeMove(row, col) {
+        // If this is the second part of a teleport move
+        if (this.teleportActive && this.teleportOrigin && !this.teleportUsed) {
+            // First apply the teleport power from the origin cell
+            const originRow = this.teleportOrigin[0];
+            const originCol = this.teleportOrigin[1];
+            this.clearPowerFromCell(originRow, originCol);
+            this.teleportOrigin = null;
+            this.teleportActive = false;
+            this.teleportUsed = true;
+        }
+
         // Check if the cell has a power before clearing it
         const power = this.grid[row][col].power;
         if (power) {
-            this.currentRange = this.normalRange + power;
-            this.powerCells.delete(`${row},${col}`);
+            this.clearPowerFromCell(row, col);
+            
+            switch (power.type) {
+                case 'power-up':
+                case 'power-down':
+                    this.currentRange = this.normalRange + power.effect;
+                    break;
+                case 'double-score':
+                case 'triple-score':
+                    // Clear existing multiplier timeout if exists
+                    if (this.multiplierTimeout) {
+                        clearTimeout(this.multiplierTimeout);
+                        if (this.activeMultiplierCell) {
+                            this.activeMultiplierCell.classList.remove('multiplier-active');
+                        }
+                    }
+                    this.scoreMultiplier = power.effect;
+                    this.activeMultiplierCell = this.grid[row][col].element;
+                    this.activeMultiplierCell.classList.add('multiplier-active');
+                    
+                    // Set timeout to reset multiplier
+                    this.multiplierTimeout = setTimeout(() => {
+                        this.scoreMultiplier = 1;
+                        this.activeMultiplierCell.classList.remove('multiplier-active');
+                        this.activeMultiplierCell = null;
+                        this.updateMultiplierDisplay();
+                    }, power.duration);
+                    break;
+                case 'teleport':
+                    // Teleport is handled separately
+                    break;
+            }
+            this.updateMultiplierDisplay();
         } else {
             this.currentRange = this.normalRange;
         }
 
         // Clear the cell's power visual
-        this.grid[row][col].element.classList.remove('power-up', 'power-down');
+        this.grid[row][col].element.classList.remove(
+            'power-up', 'power-down', 'double-score', 'triple-score', 'teleport'
+        );
         delete this.grid[row][col].power;
 
-        // Existing makeMove code
+        // Place number and update score
         this.grid[row][col].value = this.currentNumber;
         this.grid[row][col].element.textContent = this.currentNumber;
         this.grid[row][col].element.classList.add('used');
@@ -141,10 +272,11 @@ class Game {
         this.clearValidMoves();
         this.grid[row][col].element.classList.add('current');
         this.currentPosition = [row, col];
-        this.currentNumber++;
-        this.updateScore();
+        
+        // Apply score multiplier
+        this.currentNumber += this.scoreMultiplier;
 
-        // Add a new random power after the move
+        this.updateScore();
         this.addRandomPower();
 
         if (!this.hasValidMoves()) {
@@ -181,7 +313,15 @@ class Game {
     }
 
     updateScore() {
-        this.scoreElement.textContent = this.currentNumber - 1;
+        this.updateMultiplierDisplay();
+    }
+
+    updateMultiplierDisplay() {
+        // Update score text to show active multiplier
+        const scoreText = this.scoreMultiplier > 1 
+            ? `Score: ${this.currentNumber - 1} (${this.scoreMultiplier}x)`
+            : `Score: ${this.currentNumber - 1}`;
+        this.scoreElement.textContent = scoreText;
     }
 
     updateHighScore() {
@@ -209,8 +349,7 @@ class Game {
     clearAllPowers() {
         for (let row = 0; row < this.gridSize; row++) {
             for (let col = 0; col < this.gridSize; col++) {
-                this.grid[row][col].element.classList.remove('power-up', 'power-down');
-                delete this.grid[row][col].power;
+                this.clearPowerFromCell(row, col);
             }
         }
     }
@@ -228,13 +367,50 @@ class Game {
 
             if (emptyCells.length > 0) {
                 const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                const isPowerUp = Math.random() < 0.5;
                 
-                this.grid[row][col].power = isPowerUp ? 1 : -1;
-                this.grid[row][col].element.classList.add(isPowerUp ? 'power-up' : 'power-down');
-                this.powerCells.add(`${row},${col}`);
+                // Choose power type based on probabilities
+                const rand = Math.random();
+                let cumProb = 0;
+                let chosenPower = null;
+
+                for (const power of Object.values(this.powerTypes)) {
+                    cumProb += power.probability;
+                    if (rand < cumProb && !chosenPower) {
+                        chosenPower = power;
+                    }
+                }
+
+                const key = `${row},${col}`;
+                this.grid[row][col].power = chosenPower;
+                this.grid[row][col].element.classList.add(chosenPower.type, 'power-active');
+                this.powerCells.add(key);
+
+                // Set timeout to remove power after 10 seconds
+                const timeout = setTimeout(() => {
+                    if (this.powerCells.has(key)) {
+                        this.clearPowerFromCell(row, col);
+                    }
+                }, chosenPower.displayDuration); // Use displayDuration instead of hardcoded value
+
+                this.powerTimeouts.set(key, timeout);
             }
         }
+    }
+
+    clearPowerFromCell(row, col) {
+        const key = `${row},${col}`;
+        this.powerCells.delete(key);
+        if (this.powerTimeouts.has(key)) {
+            clearTimeout(this.powerTimeouts.get(key));
+            this.powerTimeouts.delete(key);
+        }
+        
+        const cell = this.grid[row][col];
+        cell.element.classList.remove(
+            'power-up', 'power-down', 'double-score', 'triple-score', 'teleport',
+            'power-active' // New class for timing animation
+        );
+        delete cell.power;
     }
 }
 

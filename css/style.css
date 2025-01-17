@@ -161,3 +161,167 @@ body {
         box-shadow: 0 0 5px currentColor;
     }
 }
+
+.instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #333;
+    border-radius: 5px;
+    color: white;
+}
+
+.instructions h3 {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.power-guide {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.power-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px;
+}
+
+.power-example {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    flex-shrink: 0;
+}
+
+.cell.double-score {
+    background-color: #FFD700;
+    animation: glow 2s infinite;
+}
+
+.cell.teleport {
+    background-color: #9C27B0;
+    animation: glow 2s infinite;
+}
+
+.cell.wild-move {
+    background-color: #FF9800;
+    animation: glow 2s infinite;
+}
+
+.power-example.double-score {
+    background-color: #FFD700;
+}
+
+.power-example.teleport {
+    background-color: #9C27B0;
+}
+
+.power-example.wild-move {
+    background-color: #FF9800;
+}
+
+.cell.double-score::after {
+    content: "2×";
+    color: #000;
+}
+
+.cell.teleport::after {
+    content: "T";
+    color: white;
+}
+
+.cell.wild-move::after {
+    content: "W";
+    color: white;
+}
+
+.cell.teleport-target {
+    border: 2px dashed #9C27B0;
+    animation: teleportPulse 1s infinite;
+}
+
+@keyframes teleportPulse {
+    0% {
+        border-color: #9C27B0;
+    }
+    50% {
+        border-color: rgba(156, 39, 176, 0.4);
+    }
+    100% {
+        border-color: #9C27B0;
+    }
+}
+
+.cell.triple-score {
+    background-color: #E91E63;
+    animation: glow 2s infinite;
+}
+
+.power-example.triple-score {
+    background-color: #E91E63;
+}
+
+.cell.triple-score::after {
+    content: "3×";
+    color: white;
+}
+
+.cell.multiplier-active {
+    position: relative;
+}
+
+.cell.multiplier-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 5px;
+    animation: multiplierTimer 5s linear forwards;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes multiplierTimer {
+    from {
+        clip-path: inset(0 0 0 0);
+    }
+    to {
+        clip-path: inset(100% 0 0 0);
+    }
+}
+
+.cell.power-active {
+    position: relative;
+}
+
+.cell.power-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 5px;
+    animation: powerTimer 10s linear forwards;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes powerTimer {
+    from {
+        clip-path: inset(0 0 0 0);
+    }
+    to {
+        clip-path: inset(100% 0 0 0);
+    }
+}
+
+.power-example.power-up {
+    background-color: #4CAF50;
+}
+
+.power-example.power-down {
+    background-color: #f44336;
+}
