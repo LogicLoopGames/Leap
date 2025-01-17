@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leap - The Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="scores">
+                <div class="current-score">Score: <span id="score">0</span></div>
+                <div class="high-score">High Score: <span id="highScore">0</span></div>
+            </div>
+        </div>
+        <div class="grid-container">
+            <!-- 7x7 grid will be created by JavaScript -->
+        </div>
+        <div class="controls">
+            <button id="start-button">New Game</button>
+            <div id="game-over" class="hidden">Game Over!</div>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>
