@@ -372,9 +372,10 @@ class Game {
 
     updateMultiplierDisplay() {
         // Update score text to show active multiplier
+        const scoreValue = this.currentNumber - 1;
         const scoreText = this.scoreMultiplier > 1 
-            ? `Score: ${this.currentNumber - 1} (${this.scoreMultiplier}x)`
-            : `Score: ${this.currentNumber - 1}`;
+            ? `${scoreValue} (${this.scoreMultiplier}x)`
+            : `${scoreValue}`;
         this.scoreElement.textContent = scoreText;
     }
 
