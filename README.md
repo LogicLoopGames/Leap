@@ -4,6 +4,9 @@ A minimalist strategic puzzle game where you try to place consecutive numbers on
 
 ![image](https://github.com/user-attachments/assets/beb5d92e-0523-4138-bafb-836d3bb6b889)
 
+![image](https://github.com/user-attachments/assets/1a4e6ebe-121d-4b1b-acfa-3e10733c6982)
+
+
 ## How to Play
 
 1. **Starting the Game**
