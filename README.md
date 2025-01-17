@@ -6,7 +6,6 @@ A minimalist strategic puzzle game where you try to place consecutive numbers on
 
 ![image](https://github.com/user-attachments/assets/1a4e6ebe-121d-4b1b-acfa-3e10733c6982)
 
-
 ## How to Play
 
 1. **Starting the Game**
@@ -19,11 +18,17 @@ A minimalist strategic puzzle game where you try to place consecutive numbers on
    - Valid moves are highlighted with a blue border
 
 3. **Power-Ups and Power-Downs**
-   - Green cells (+1): Increases your movement range by 1 for one move
-   - Red cells (-1): Decreases your movement range by 1 for one move
-   - These power modifiers appear randomly on empty cells
-   - Effects apply to both straight and diagonal moves
-   - Power cells are single-use and disappear after use
+   - **Range Modifiers**
+     - Green cells (+1): Increases movement range by 1 for one move
+     - Red cells (-1): Decreases movement range by 1 for one move
+   - **Score Multipliers**
+     - Gold cells (2×): Doubles your points for 5 seconds
+     - Pink cells (3×): Triples your points for 5 seconds
+   - **Special Movement**
+     - Purple cells (T): Teleport to any empty cell once
+   - All power-ups appear randomly and last for 10 seconds if not used
+   - Power-ups disappear after use or when time runs out
+   - Score multipliers can stack with new ones, resetting the duration
 
 4. **Game End**
    - The game ends when there are no valid moves left
@@ -33,7 +38,11 @@ A minimalist strategic puzzle game where you try to place consecutive numbers on
 ## Features
 
 - 7x7 grid gameplay
-- Power-ups and power-downs for varied strategy
+- Dynamic power-up system with timing mechanics
+- Multiple types of power-ups for varied strategy
+- Visual indicators for power-up durations
+- Score multiplier system
+- Teleportation ability
 - High score tracking
 - Valid move highlighting
 - Responsive design
@@ -43,4 +52,23 @@ A minimalist strategic puzzle game where you try to place consecutive numbers on
 - Plan your moves carefully to avoid getting stuck
 - Use power-ups strategically to reach otherwise inaccessible cells
 - Sometimes a power-down can help you access tight spots
+- Try to chain score multipliers for higher scores
+- Watch the power-up timers to avoid losing valuable bonuses
+- Save teleport for emergency situations
 - Try to keep multiple paths open for longer gameplay
+
+## Power-Up Strategy Guide
+
+1. **Range Modifiers (+1/-1)**
+   - Use +1 to reach distant valuable cells
+   - Use -1 to access tight spots between numbers
+
+2. **Score Multipliers (2×/3×)**
+   - Active for 5 seconds after collection
+   - Try to make multiple moves while active
+   - Can grab a new multiplier to extend duration
+
+3. **Teleport (T)**
+   - One-time use per pickup
+   - Great for escaping trapped positions
+   - Can help reach isolated power-ups
