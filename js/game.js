@@ -49,6 +49,9 @@ class Game {
         this.activeMultiplierCell = null;
         this.powerTimeouts = new Map(); // Track timeouts for power cells
         this.teleportUsed = false;
+        this.activeMultipliers = new Set(); // Track active multipliers
+        this.clearingAnimation = false;
+        this.clearAnimationDuration = 500; // 500ms for clear animation
         this.initialize();
     }
 
@@ -104,6 +107,7 @@ class Game {
         this.powerCells.clear();
         this.clearAllPowers();
         this.scoreMultiplier = 1;
+        this.activeMultipliers.clear();
         if (this.multiplierTimeout) {
             clearTimeout(this.multiplierTimeout);
             this.multiplierTimeout = null;
@@ -225,19 +229,22 @@ class Game {
                     break;
                 case 'double-score':
                 case 'triple-score':
-                    // Clear existing multiplier timeout if exists
-                    if (this.multiplierTimeout) {
-                        clearTimeout(this.multiplierTimeout);
-                        if (this.activeMultiplierCell) {
-                            this.activeMultiplierCell.classList.remove('multiplier-active');
-                        }
-                    }
-                    this.scoreMultiplier = power.effect;
+                    // Calculate new multiplier by multiplying with current multiplier
+                    const newMultiplier = this.scoreMultiplier * power.effect;
+                    this.scoreMultiplier = newMultiplier;
+
+                    // Add visual indicator
                     this.activeMultiplierCell = this.grid[row][col].element;
                     this.activeMultiplierCell.classList.add('multiplier-active');
                     
+                    // Clear existing timeout if any
+                    if (this.multiplierTimeout) {
+                        clearTimeout(this.multiplierTimeout);
+                    }
+                    
                     // Set timeout to reset multiplier
                     this.multiplierTimeout = setTimeout(() => {
+                        // Reset to 1 when timer expires
                         this.scoreMultiplier = 1;
                         this.activeMultiplierCell.classList.remove('multiplier-active');
                         this.activeMultiplierCell = null;
@@ -279,6 +286,8 @@ class Game {
         this.updateScore();
         this.addRandomPower();
 
+        this.checkAndClearLines();
+
         if (!this.hasValidMoves()) {
             this.gameOver();
         } else {
@@ -291,16 +300,61 @@ class Game {
         
         const [currentRow, currentCol] = this.currentPosition;
 
-        // Check all possible moves
+        // First check if there's a teleport power-up that can be used
         for (let row = 0; row < this.gridSize; row++) {
             for (let col = 0; col < this.gridSize; col++) {
-                if (this.grid[row][col].value === null && this.isValidMove(row, col)) {
+                const cell = this.grid[row][col];
+                if (cell.value === null && this.isValidMove(row, col)) {
+                    // If this is a reachable cell with teleport power
+                    if (cell.power && cell.power.type === 'teleport' && !this.teleportUsed) {
+                        // Check if there are any empty cells to teleport to
+                        for (let r = 0; r < this.gridSize; r++) {
+                            for (let c = 0; c < this.gridSize; c++) {
+                                if (this.grid[r][c].value === null && 
+                                    !(r === row && c === col)) {
+                                    return true; // Found a valid teleport destination
+                                }
+                            }
+                        }
+                    }
+                    // If this is a reachable cell with range modifier
+                    if (cell.power && (cell.power.type === 'power-up' || cell.power.type === 'power-down')) {
+                        // Check moves with modified range
+                        const modifiedRange = this.normalRange + cell.power.effect;
+                        for (let r = 0; r < this.gridSize; r++) {
+                            for (let c = 0; c < this.gridSize; c++) {
+                                if (this.grid[r][c].value === null) {
+                                    // Check if move would be valid with modified range
+                                    if (this.isValidMoveWithRange(r, c, row, col, modifiedRange)) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // If this is just a normal reachable empty cell
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    // Helper method to check move validity with a specific range
+    isValidMoveWithRange(targetRow, targetCol, fromRow, fromCol, range) {
+        // Straight moves
+        if (targetRow === fromRow) {
+            return Math.abs(targetCol - fromCol) === range;
+        }
+        if (targetCol === fromCol) {
+            return Math.abs(targetRow - fromRow) === range;
+        }
+        
+        // Diagonal moves
+        const diagonalRange = range - 1;
+        return Math.abs(targetRow - fromRow) === diagonalRange && 
+               Math.abs(targetCol - fromCol) === diagonalRange;
     }
 
     gameOver() {
@@ -411,6 +465,133 @@ class Game {
             'power-active' // New class for timing animation
         );
         delete cell.power;
+    }
+
+    checkAndClearLines() {
+        const linesToClear = this.findLinesToClear();
+        if (linesToClear.length > 0) {
+            this.clearingAnimation = true;
+            this.animateLineClear(linesToClear, () => {
+                this.clearLines(linesToClear);
+                this.clearingAnimation = false;
+                this.showValidMoves();
+            });
+        }
+    }
+
+    findLinesToClear() {
+        const lines = [];
+
+        // Check rows
+        for (let row = 0; row < this.gridSize; row++) {
+            let rowFull = true;
+            for (let col = 0; col < this.gridSize; col++) {
+                if (this.grid[row][col].value === null) {
+                    rowFull = false;
+                    break;
+                }
+            }
+            if (rowFull) {
+                lines.push({ type: 'row', index: row });
+            }
+        }
+
+        // Check columns
+        for (let col = 0; col < this.gridSize; col++) {
+            let colFull = true;
+            for (let row = 0; row < this.gridSize; row++) {
+                if (this.grid[row][col].value === null) {
+                    colFull = false;
+                    break;
+                }
+            }
+            if (colFull) {
+                lines.push({ type: 'col', index: col });
+            }
+        }
+
+        return lines;
+    }
+
+    animateLineClear(lines, callback) {
+        // Add flash animation to cells that will be cleared
+        lines.forEach(line => {
+            const cells = this.getCellsInLine(line);
+            cells.forEach(cell => {
+                cell.element.classList.add('clear-animation');
+            });
+        });
+
+        // Wait for animation to complete
+        setTimeout(() => {
+            lines.forEach(line => {
+                const cells = this.getCellsInLine(line);
+                cells.forEach(cell => {
+                    cell.element.classList.remove('clear-animation');
+                });
+            });
+            callback();
+        }, this.clearAnimationDuration);
+    }
+
+    getCellsInLine(line) {
+        const cells = [];
+        if (line.type === 'row') {
+            for (let col = 0; col < this.gridSize; col++) {
+                cells.push(this.grid[line.index][col]);
+            }
+        } else {
+            for (let row = 0; row < this.gridSize; row++) {
+                cells.push(this.grid[row][line.index]);
+            }
+        }
+        return cells;
+    }
+
+    clearLines(lines) {
+        lines.forEach(line => {
+            const cells = this.getCellsInLine(line);
+            cells.forEach(cell => {
+                cell.value = null;
+                cell.element.textContent = '';
+                cell.element.className = 'cell';
+                delete cell.power;
+            });
+        });
+
+        // Add bonus points for clearing lines
+        const clearedLines = lines.length;
+        const baseBonus = 100;
+        const bonus = baseBonus * clearedLines * this.scoreMultiplier;
+        this.currentNumber += bonus;
+        
+        // Show bonus animation
+        this.showBonusAnimation(bonus, lines);
+        
+        // Add new power-ups after clearing
+        this.addRandomPower();
+        this.addRandomPower(); // Add extra power-up for balance
+    }
+
+    showBonusAnimation(bonus, lines) {
+        const bonusDiv = document.createElement('div');
+        bonusDiv.className = 'bonus-popup';
+        bonusDiv.textContent = `+${bonus}`;
+        
+        // Position the bonus text near the cleared lines
+        const firstLine = lines[0];
+        const cell = this.getCellsInLine(firstLine)[0];
+        const rect = cell.element.getBoundingClientRect();
+        
+        bonusDiv.style.left = `${rect.left}px`;
+        bonusDiv.style.top = `${rect.top}px`;
+        
+        document.body.appendChild(bonusDiv);
+        
+        // Remove after animation
+        setTimeout(() => {
+            bonusDiv.remove();
+        }, 1000);
     }
 }
 
