@@ -129,10 +129,9 @@ class Game {
         if (this.grid[row][col].value !== null) return;
 
         // If teleport is active, handle it differently
-        if (this.teleportActive && !this.teleportUsed) {
+        if (this.teleportActive) {
             this.makeMove(row, col);
             this.teleportActive = false;
-            this.teleportUsed = true;
             this.clearTeleportHighlight();
             return;
         }
@@ -145,8 +144,6 @@ class Game {
         if (this.isValidMove(row, col)) {
             const power = this.grid[row][col].power;
             if (power && power.type === 'teleport') {
-                // Reset teleport flag when reaching a new teleport cell
-                this.teleportUsed = false;
                 this.handleTeleport(row, col);
             } else {
                 this.makeMove(row, col);
@@ -209,14 +206,12 @@ class Game {
 
     makeMove(row, col) {
         // If this is the second part of a teleport move
-        if (this.teleportActive && this.teleportOrigin && !this.teleportUsed) {
+        if (this.teleportActive && this.teleportOrigin) {
             // First apply the teleport power from the origin cell
             const originRow = this.teleportOrigin[0];
             const originCol = this.teleportOrigin[1];
             this.clearPowerFromCell(originRow, originCol);
             this.teleportOrigin = null;
-            this.teleportActive = false;
-            this.teleportUsed = true;
         }
 
         // Check if the cell has a power before clearing it
