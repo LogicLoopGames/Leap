@@ -202,10 +202,9 @@ class Game {
     }
 
     makeMove(row, col) {
-        // If this is a teleport move, clear the origin cell's power
-        if (this.teleportActive && this.teleportOrigin) {
-            const [originRow, originCol] = this.teleportOrigin;
-            this.clearPowerFromCell(originRow, originCol);
+        // Remove any existing teleport power-up if this is a teleport move
+        if (this.teleportActive) {
+            this.clearValidMoves(); // Clear all highlights first
         }
 
         // Check if the cell has a power before clearing it
@@ -283,7 +282,7 @@ class Game {
         if (!this.hasValidMoves()) {
             this.gameOver();
         } else {
-            this.showValidMoves();
+            this.showValidMoves(); // Show valid moves for next turn
         }
     }
 
