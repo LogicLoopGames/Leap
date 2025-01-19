@@ -252,7 +252,8 @@ class Game {
                     }, power.duration);
                     break;
                 case 'teleport':
-                    // Teleport is handled separately
+                    // Reset teleport flag when picking up a new teleport power-up
+                    this.teleportUsed = false;
                     break;
             }
             this.updateMultiplierDisplay();
