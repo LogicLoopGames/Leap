@@ -132,6 +132,8 @@ class Game {
             this.makeMove(row, col);
             this.teleportActive = false; // Deactivate teleport after use
             this.clearTeleportHighlight();
+            this.clearValidMoves(); // Clear all highlights
+            this.showValidMoves(); // Show new valid moves based on normal rules
             return;
         }
 
