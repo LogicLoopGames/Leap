@@ -127,14 +127,10 @@ class Game {
     handleCellClick(row, col) {
         if (this.grid[row][col].value !== null) return;
 
-        // If teleport is active, handle the teleport destination
-        if (this.teleportActive && this.teleportOrigin) {
-            if (row === this.teleportOrigin[0] && col === this.teleportOrigin[1]) {
-                return; // Can't teleport to the teleport cell itself
-            }
+        // If teleport is active, use the teleport
+        if (this.teleportActive) {
             this.makeMove(row, col);
-            this.teleportActive = false;
-            this.teleportOrigin = null;
+            this.teleportActive = false; // Deactivate teleport after use
             this.clearTeleportHighlight();
             return;
         }
@@ -155,11 +151,9 @@ class Game {
     }
 
     handleTeleport(row, col) {
-        // Store the teleport origin and activate teleport mode
-        this.teleportOrigin = [row, col];
-        this.teleportActive = true;
-
-        // Highlight all empty cells as valid moves
+        this.teleportActive = true; // Activate teleport mode
+        
+        // Highlight all empty cells as valid moves except current cell
         for (let r = 0; r < this.gridSize; r++) {
             for (let c = 0; c < this.gridSize; c++) {
                 if (this.grid[r][c].value === null && 
@@ -168,6 +162,9 @@ class Game {
                 }
             }
         }
+
+        // Remove the teleport power-up immediately
+        this.clearPowerFromCell(row, col);
     }
 
     clearTeleportHighlight() {
@@ -179,10 +176,9 @@ class Game {
     }
 
     isValidMove(row, col) {
-        if (this.teleportActive && this.teleportOrigin) {
-            // During teleport, any empty cell is valid except the teleport cell itself
-            return this.grid[row][col].value === null && 
-                   !(row === this.teleportOrigin[0] && col === this.teleportOrigin[1]);
+        if (this.teleportActive) {
+            // During teleport, any empty cell is valid except current position
+            return this.grid[row][col].value === null;
         }
 
         const [currentRow, currentCol] = this.currentPosition;
