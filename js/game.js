@@ -121,17 +121,20 @@ class Game {
         this.updateScore();
         this.updateMultiplierDisplay();
         this.teleportActive = false;
-        this.teleportUsed = false;
         this.teleportOrigin = null;
     }
 
     handleCellClick(row, col) {
         if (this.grid[row][col].value !== null) return;
 
-        // If teleport is active, handle it differently
-        if (this.teleportActive) {
+        // If teleport is active, handle the teleport destination
+        if (this.teleportActive && this.teleportOrigin) {
+            if (row === this.teleportOrigin[0] && col === this.teleportOrigin[1]) {
+                return; // Can't teleport to the teleport cell itself
+            }
             this.makeMove(row, col);
             this.teleportActive = false;
+            this.teleportOrigin = null;
             this.clearTeleportHighlight();
             return;
         }
@@ -152,9 +155,7 @@ class Game {
     }
 
     handleTeleport(row, col) {
-        if (this.teleportUsed) return;
-
-        // Store the teleport origin
+        // Store the teleport origin and activate teleport mode
         this.teleportOrigin = [row, col];
         this.teleportActive = true;
 
@@ -178,7 +179,7 @@ class Game {
     }
 
     isValidMove(row, col) {
-        if (this.teleportActive && !this.teleportUsed) {
+        if (this.teleportActive && this.teleportOrigin) {
             // During teleport, any empty cell is valid except the teleport cell itself
             return this.grid[row][col].value === null && 
                    !(row === this.teleportOrigin[0] && col === this.teleportOrigin[1]);
@@ -205,13 +206,10 @@ class Game {
     }
 
     makeMove(row, col) {
-        // If this is the second part of a teleport move
+        // If this is a teleport move, clear the origin cell's power
         if (this.teleportActive && this.teleportOrigin) {
-            // First apply the teleport power from the origin cell
-            const originRow = this.teleportOrigin[0];
-            const originCol = this.teleportOrigin[1];
+            const [originRow, originCol] = this.teleportOrigin;
             this.clearPowerFromCell(originRow, originCol);
-            this.teleportOrigin = null;
         }
 
         // Check if the cell has a power before clearing it
