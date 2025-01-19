@@ -133,7 +133,11 @@ class Game {
             this.teleportActive = false; // Deactivate teleport after use
             this.clearTeleportHighlight();
             this.clearValidMoves(); // Clear all highlights
-            this.showValidMoves(); // Show new valid moves based on normal rules
+            
+            // Teleport kullanıldıktan sonra yeni pozisyondan yapılabilecek hamleleri göster
+            if (this.currentPosition) {
+                this.showValidMoves();
+            }
             return;
         }
 
@@ -178,11 +182,16 @@ class Game {
     }
 
     isValidMove(row, col) {
+        if (this.grid[row][col].value !== null) return false;
+        
         if (this.teleportActive) {
             // During teleport, any empty cell is valid except current position
-            return this.grid[row][col].value === null;
+            const [currentRow, currentCol] = this.currentPosition;
+            return !(row === currentRow && col === currentCol);
         }
 
+        if (!this.currentPosition) return false;
+        
         const [currentRow, currentCol] = this.currentPosition;
         
         // Straight moves
