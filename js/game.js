@@ -144,7 +144,9 @@ class Game {
 
         if (this.isValidMove(row, col)) {
             const power = this.grid[row][col].power;
-            if (power && power.type === 'teleport' && !this.teleportUsed) {
+            if (power && power.type === 'teleport') {
+                // Reset teleport flag when reaching a new teleport cell
+                this.teleportUsed = false;
                 this.handleTeleport(row, col);
             } else {
                 this.makeMove(row, col);
